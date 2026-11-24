@@ -186,6 +186,7 @@ var REPORTS = [
 {id:'transfers',title:'Transfer Report',desc:'Player transfers with both clubs, date and fee.',fn:'get_transfer_report',
  p:[['p_team_name','Team (from or to)','text','e.g. Chelsea'],['p_player_name','Player name','text'],['p_min_fee','Minimum fee','number','e.g. 10000000'],['p_date_from','Date from','date'],['p_date_to','Date to','date']]},
 {id:'referee-summary',title:'Referee Summary Report',desc:'Matches officiated, goals per match and average attendance.',fn:'get_referee_summary',
+ p:[['p_referee_name','Referee name','text','e.g. Oliver'],['p_country_name','Country','text','e.g. England']]}
 ];
 
 function showReports(){
