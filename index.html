@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Football Database Explorer</title>
+<style>
+:root{--bg:#f3f6f5;--sf:#fff;--tx:#1b2a26;--mu:#5a6c66;--ln:#d8e1de;--ac:#0f6b57;--act:#fff;--hd:#e6efec;--er:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#111a17;--sf:#1a2522;--tx:#e5eeeb;--mu:#98aaa4;--ln:#2d3c38;--ac:#4cc3a4;--act:#0a1411;--hd:#23322e;--er:#ff8a80;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 "Segoe UI",system-ui,Arial,sans-serif}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+nav{background:var(--sf);border-right:1px solid var(--ln);padding:16px 10px;position:sticky;top:0;height:100vh;overflow-y:auto}
+nav h1{font-size:1.05rem;margin:0 8px 10px}
+nav h3{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);margin:14px 8px 4px}
+nav a{display:block;padding:6px 10px;border-radius:6px;color:var(--tx);text-decoration:none;font-size:.92rem}
+nav a:hover{background:var(--hd)}
+nav a.on{background:var(--ac);color:var(--act)}
+main{padding:20px;min-width:0}
+h2{margin:0 0 4px;font-size:1.4rem}
+.sub{color:var(--mu);margin:0 0 14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:14px;text-decoration:none;color:var(--tx)}
+.card:hover{border-color:var(--ac)}
+.card b{display:block;font-size:1.5rem}
+.card span{color:var(--mu);font-size:.85rem}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+input{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:7px 10px;min-width:220px}
+button{font:inherit;background:var(--ac);color:var(--act);border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+.wrap{overflow-x:auto;background:var(--sf);border:1px solid var(--ln);border-radius:10px}
+table{width:100%;border-collapse:collapse;min-width:600px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--ln);white-space:nowrap}
+th{background:var(--hd);font-weight:600;position:sticky;top:0}
+th.s{cursor:pointer}
+tr:hover td{background:var(--hd)}
+.pg{display:flex;gap:12px;align-items:center;margin-top:12px;color:var(--mu)}
+.er{color:var(--er);padding:14px}
+a.lk{color:var(--ac)}
+@media(max-width:800px){.app{grid-template-columns:1fr}nav{position:static;height:auto;display:flex;flex-wrap:wrap;gap:4px;border-right:0;border-bottom:1px solid var(--ln)}nav h1,nav h3{width:100%}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+<div class="app">
+<nav id="nav"></nav>
+<main id="main"></main>
+</div>
+<script>
+// ===== PASTE YOUR SUPABASE DETAILS HERE =====
+var SUPABASE_URL = "https://YOUR-PROJECT-ID.supabase.co";
+var SUPABASE_KEY = "YOUR-PUBLISHABLE-OR-ANON-KEY";
+// ============================================
+
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var e = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+var d = v => v == null || v === '' ? '—' : e(v);
+var n = v => v == null ? '—' : Number(v).toLocaleString();
+var money = v => v == null ? '—' : '$' + Number(v).toLocaleString();
+var pn = o => o ? e(o.first_name + ' ' + o.last_name) : '—';
+var T = (o, k) => o ? d(o[k]) : '—';
+
+var TABLES = [
+{id:'countries',g:'Football',label:'Countries',pk:'country_id',s:'country_name',
+ c:[['ID',r=>d(r.country_id),'country_id'],['Country',r=>d(r.country_name),'country_name'],['Continent',r=>d(r.continent),'continent']]},
+{id:'leagues',g:'Football',label:'Leagues',pk:'league_id',s:'league_name',sel:'*,countries(country_name)',
+ c:[['ID',r=>d(r.league_id),'league_id'],['League',r=>d(r.league_name),'league_name'],['Country',r=>T(r.countries,'country_name')],['Tier',r=>d(r.tier),'tier']]},
+{id:'teams',g:'Football',label:'Teams',pk:'team_id',s:'team_name',sel:'*,countries(country_name),leagues(league_name)',
+ c:[['ID',r=>d(r.team_id),'team_id'],['Team',r=>d(r.team_name),'team_name'],['Country',r=>T(r.countries,'country_name')],['League',r=>T(r.leagues,'league_name')],['City',r=>d(r.city),'city'],['Founded',r=>d(r.founded_year),'founded_year'],['Stadium',r=>d(r.stadium),'stadium'],['Capacity',r=>n(r.stadium_capacity),'stadium_capacity']]},
+{id:'matches',g:'Football',label:'Matches',pk:'match_id',s:'season',big:1,
+ sel:'*,home:teams!home_team_id(team_name),away:teams!away_team_id(team_name),leagues(league_name),referees(full_name)',
+ o:[['match_date',false],['match_id',false]],
+ c:[['Date',r=>d(r.match_date),'match_date'],['Season',r=>d(r.season),'season'],['League',r=>T(r.leagues,'league_name')],['Home',r=>T(r.home,'team_name')],['Score',r=>n(r.home_goals)+' - '+n(r.away_goals)],['Away',r=>T(r.away,'team_name')],['Referee',r=>T(r.referees,'full_name')],['Attendance',r=>n(r.attendance),'attendance']]},
+{id:'v_league_table',g:'Football',label:'League Standings',s:'team_name',
+ o:[['season',false],['league_id',true],['position',true]],
+ c:[['Season',r=>d(r.season),'season'],['League',r=>d(r.league_name),'league_name'],['Pos',r=>d(r.position),'position'],['Team',r=>d(r.team_name),'team_name'],['P',r=>d(r.played),'played'],['W',r=>d(r.won),'won'],['D',r=>d(r.drawn),'drawn'],['L',r=>d(r.lost),'lost'],['GF',r=>d(r.goals_for),'goals_for'],['GA',r=>d(r.goals_against),'goals_against'],['GD',r=>d(r.goal_diff),'goal_diff'],['Pts',r=>d(r.points),'points']]},
+{id:'players',g:'Football',label:'Players',pk:'player_id',s:'last_name',sel:'*,teams(team_name),countries(country_name)',
+ c:[['ID',r=>d(r.player_id),'player_id'],['Name',r=>pn(r)],['Team',r=>T(r.teams,'team_name')],['Country',r=>T(r.countries,'country_name')],['Pos',r=>d(r.position),'position'],['Shirt',r=>d(r.shirt_number),'shirt_number'],['Born',r=>d(r.birth_date),'birth_date'],['Height',r=>r.height_cm?d(r.height_cm)+' cm':'—','height_cm'],['Value',r=>money(r.market_value),'market_value']]},
+{id:'coaches',g:'Football',label:'Coaches',pk:'coach_id',s:'full_name',sel:'*,teams(team_name),countries(country_name)',
+ c:[['ID',r=>d(r.coach_id),'coach_id'],['Name',r=>d(r.full_name),'full_name'],['Team',r=>T(r.teams,'team_name')],['Country',r=>T(r.countries,'country_name')],['Since',r=>d(r.start_date),'start_date']]},
+{id:'referees',g:'Football',label:'Referees',pk:'referee_id',s:'full_name',sel:'*,countries(country_name)',
+ c:[['ID',r=>d(r.referee_id),'referee_id'],['Name',r=>d(r.full_name),'full_name'],['Country',r=>T(r.countries,'country_name')]]},
+{id:'match_events',g:'Football',label:'Match Events',pk:'event_id',s:'event_type',big:1,
+ sel:'*,matches(match_date),teams(team_name),players(first_name,last_name)',
+ c:[['ID',r=>d(r.event_id),'event_id'],['Match date',r=>T(r.matches,'match_date')],['Team',r=>T(r.teams,'team_name')],['Player',r=>pn(r.players)],['Minute',r=>d(r.minute),'minute'],['Event',r=>d(r.event_type),'event_type']]},
+{id:'player_match_stats',g:'Football',label:'Player Stats',pk:'stat_id',big:1,sel:'*,players(first_name,last_name),teams(team_name)',
+ c:[['ID',r=>d(r.stat_id),'stat_id'],['Match',r=>d(r.match_id),'match_id'],['Player',r=>pn(r.players)],['Team',r=>T(r.teams,'team_name')],['Min',r=>d(r.minutes_played),'minutes_played'],['Goals',r=>d(r.goals),'goals'],['Assists',r=>d(r.assists),'assists'],['Shots',r=>d(r.shots),'shots'],['Passes',r=>d(r.passes),'passes'],['Yellow',r=>d(r.yellow_cards),'yellow_cards'],['Red',r=>d(r.red_cards),'red_cards'],['Rating',r=>d(r.rating),'rating']]},
+{id:'transfers',g:'Football',label:'Transfers',pk:'transfer_id',sel:'*,players(first_name,last_name),from:teams!from_team_id(team_name),to:teams!to_team_id(team_name)',
+ c:[['ID',r=>d(r.transfer_id),'transfer_id'],['Player',r=>pn(r.players)],['From',r=>T(r.from,'team_name')],['To',r=>T(r.to,'team_name')],['Date',r=>d(r.transfer_date),'transfer_date'],['Fee',r=>money(r.fee),'fee']]},
+{id:'trophies',g:'Football',label:'Trophies',pk:'trophy_id',s:'trophy_name',sel:'*,teams(team_name),leagues(league_name)',
+ c:[['ID',r=>d(r.trophy_id),'trophy_id'],['Trophy',r=>d(r.trophy_name),'trophy_name'],['Type',r=>d(r.trophy_type),'trophy_type'],['Winner',r=>T(r.teams,'team_name')],['League',r=>T(r.leagues,'league_name')],['Season',r=>d(r.season),'season']]},
+{id:'sponsors',g:'Football',label:'Sponsors',pk:'sponsor_id',s:'sponsor_name',
+ c:[['ID',r=>d(r.sponsor_id),'sponsor_id'],['Sponsor',r=>d(r.sponsor_name),'sponsor_name'],['Industry',r=>d(r.industry),'industry']]},
+{id:'team_sponsors',g:'Football',label:'Team Sponsors',o:[['team_id',true],['sponsor_id',true]],sel:'*,teams(team_name),sponsors(sponsor_name)',
+ c:[['Team',r=>T(r.teams,'team_name')],['Sponsor',r=>T(r.sponsors,'sponsor_name')],['Deal value',r=>money(r.deal_value),'deal_value'],['Since',r=>d(r.start_year),'start_year']]},
+{id:'employees',g:'Company',label:'Employees',pk:'employee_id',s:'last_name',sel:'*,departments(department_name)',
+ c:[['ID',r=>d(r.employee_id),'employee_id'],['Name',r=>pn(r)],['Email',r=>d(r.email),'email'],['Job',r=>d(r.job_id),'job_id'],['Department',r=>T(r.departments,'department_name')],['Salary',r=>money(r.salary),'salary'],['Hired',r=>d(r.hire_date),'hire_date'],['Manager ID',r=>d(r.manager_id),'manager_id'],['Commission',r=>d(r.commission_pct),'commission_pct']]},
+{id:'departments',g:'Company',label:'Departments',pk:'department_id',s:'department_name',sel:'*,locations(city)',
+ c:[['ID',r=>d(r.department_id),'department_id'],['Department',r=>d(r.department_name),'department_name'],['City',r=>T(r.locations,'city')],['Manager ID',r=>d(r.manager_id),'manager_id']]},
+{id:'locations',g:'Company',label:'Locations',pk:'location_id',s:'city',
+ c:[['ID',r=>d(r.location_id),'location_id'],['City',r=>d(r.city),'city'],['Country',r=>d(r.country),'country']]},
+{id:'projects',g:'Company',label:'Projects',pk:'project_id',s:'project_name',sel:'*,departments(department_name)',
+ c:[['ID',r=>d(r.project_id),'project_id'],['Project',r=>d(r.project_name),'project_name'],['Department',r=>T(r.departments,'department_name')],['Budget',r=>money(r.budget),'budget'],['Start',r=>d(r.start_date),'start_date']]},
+{id:'employee_projects',g:'Company',label:'Project Hours',o:[['project_id',true],['employee_id',true]],sel:'*,employees(first_name,last_name),projects(project_name)',
+ c:[['Employee',r=>pn(r.employees)],['Project',r=>T(r.projects,'project_name')],['Hours',r=>d(r.hours),'hours']]},
+{id:'documents',g:'Files',label:'Documents',pk:'document_id',s:'title',
+ c:[['ID',r=>d(r.document_id),'document_id'],['Title',r=>d(r.title),'title'],['Author',r=>d(r.author),'author'],['Language',r=>d(r.language),'language'],['Year',r=>d(r.publication_year),'publication_year'],['Pages',r=>d(r.page_count),'page_count'],
+  ['File',r=>r.file_path?'<a class="lk" target="_blank" rel="noopener" href="'+e(SUPABASE_URL+'/storage/v1/object/public/documents/'+r.file_path)+'">Open PDF</a>':'—']]}
+];
+
+var PS = 25, cur = null, page = 0, sortKey = null, asc = true, term = '', timer;
+var nav = document.getElementById('nav'), main = document.getElementById('main');
+
+function buildNav(){
+  var h = '<h1>⚽ Database Explorer</h1><a href="#home" id="n-home">Overview</a>', g = '';
+  TABLES.forEach(t => {
+    if (t.g !== g){ g = t.g; h += '<h3>' + e(g) + '</h3>'; }
+    h += '<a href="#' + t.id + '" id="n-' + t.id + '">' + e(t.label) + '</a>';
+  });
+  nav.innerHTML = h;
+}
+
+async function home(){
+  main.innerHTML = '<h2>Overview</h2><p class="sub">Click a table to browse it. Counting rows…</p><div class="cards" id="cards"></div>';
+  var box = document.getElementById('cards');
+  box.innerHTML = TABLES.map(t => '<a class="card" href="#' + t.id + '"><b id="c-' + t.id + '">…</b><span>' + e(t.label) + '</span></a>').join('');
+  TABLES.forEach(async t => {
+    var r = await db.from(t.id).select('*', {count: t.big ? 'estimated' : 'exact', head: true});
+    var el = document.getElementById('c-' + t.id);
+    if (el) el.textContent = r.error ? '!' : n(r.count);
+  });
+}
+
+async function load(){
+  var t = cur, from = page * PS;
+  var q = db.from(t.id).select(t.sel || '*', {count: t.big ? 'estimated' : 'exact'});
+  if (term && t.s) q = q.ilike(t.s, '%' + term + '%');
+  var o = (t.o || (t.pk ? [[t.pk, true]] : []));
+  if (sortKey) o = [[sortKey, asc]].concat(o.filter(x => x[0] !== sortKey));
+  o.forEach(x => { q = q.order(x[0], {ascending: x[1]}); });
+  var r = await q.range(from, from + PS - 1);
+  var body = document.getElementById('body'), info = document.getElementById('info');
+  if (r.error){
+    body.innerHTML = '<tr><td class="er" colspan="20">Could not load: ' + e(r.error.message) + '</td></tr>';
+    info.textContent = ''; return;
+  }
+  var rows = r.data, total = r.count == null ? rows.length : r.count;
+  body.innerHTML = rows.length
+    ? rows.map(x => '<tr>' + t.c.map(c => '<td>' + c[1](x) + '</td>').join('') + '</tr>').join('')
+    : '<tr><td colspan="20" class="sub">No rows found.</td></tr>';
+  var pages = Math.max(1, Math.ceil(total / PS));
+  info.textContent = (rows.length ? from + 1 : 0) + '–' + (from + rows.length) + ' of ' + n(total) + (t.big ? ' (approx.)' : '') + ' · page ' + (page + 1) + ' of ' + n(pages);
+  document.getElementById('prev').disabled = page === 0;
+  document.getElementById('next').disabled = from + PS >= total;
+}
+
+function show(t){
+  cur = t; page = 0; sortKey = null; asc = true; term = '';
+  main.innerHTML = '<h2>' + e(t.label) + '</h2><p class="sub">Table: <code>' + e(t.id) + '</code></p>' +
+    '<div class="bar">' + (t.s ? '<input id="q" placeholder="Search by ' + e(t.s) + '…">' : '') + '</div>' +
+    '<div class="wrap"><table><thead><tr>' +
+    t.c.map((c, i) => '<th' + (c[2] ? ' class="s" data-k="' + c[2] + '" title="Click to sort"' : '') + '>' + e(c[0]) + '</th>').join('') +
+    '</tr></thead><tbody id="body"><tr><td class="sub" colspan="20">Loading…</td></tr></tbody></table></div>' +
+    '<div class="pg"><button id="prev">Previous</button><button id="next">Next</button><span id="info"></span></div>';
+  var q = document.getElementById('q');
+  if (q) q.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { term = q.value.trim(); page = 0; load(); }, 300); });
+  document.getElementById('prev').onclick = () => { page--; load(); };
+  document.getElementById('next').onclick = () => { page++; load(); };
+  main.querySelectorAll('th.s').forEach(th => th.onclick = () => {
+    var k = th.dataset.k; asc = sortKey === k ? !asc : true; sortKey = k; page = 0;
+    main.querySelectorAll('th.s').forEach(x => x.textContent = x.textContent.replace(/ [▲▼]$/, ''));
+    th.textContent += asc ? ' ▲' : ' ▼'; load();
+  });
+  load();
+}
+
+function route(){
+  var id = location.hash.slice(1) || 'home';
+  nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.id === 'n-' + id));
+  var t = TABLES.find(x => x.id === id);
+  if (t) show(t); else home();
+  window.scrollTo(0, 0);
+}
+
+buildNav();
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
