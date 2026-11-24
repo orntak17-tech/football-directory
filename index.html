@@ -37,6 +37,15 @@ tr:hover td{background:var(--hd)}
 .pg{display:flex;gap:12px;align-items:center;margin-top:12px;color:var(--mu)}
 .er{color:var(--er);padding:14px}
 a.lk{color:var(--ac)}
+select{font:inherit;color:var(--tx);background:var(--sf);border:1px solid var(--ln);border-radius:6px;padding:7px 10px}
+button.g{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+.rf{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;background:var(--sf);border:1px solid var(--ln);border-radius:10px;padding:16px;margin-bottom:14px}
+.rf label{display:flex;flex-direction:column;font-size:.85rem;color:var(--mu);gap:4px}
+.rf label.ck{flex-direction:row;align-items:center;gap:8px;color:var(--tx)}
+.rf input,.rf select{min-width:0}
+.rf input[type=checkbox]{width:auto}
+.er2{color:var(--er)}
+@media print{nav,.np,.pg{display:none!important}.app{display:block}}
 @media(max-width:800px){.app{grid-template-columns:1fr}nav{position:static;height:auto;display:flex;flex-wrap:wrap;gap:4px;border-right:0;border-bottom:1px solid var(--ln)}nav h1,nav h3{width:100%}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -92,20 +101,7 @@ var TABLES = [
 {id:'sponsors',g:'Football',label:'Sponsors',pk:'sponsor_id',s:'sponsor_name',
  c:[['ID',r=>d(r.sponsor_id),'sponsor_id'],['Sponsor',r=>d(r.sponsor_name),'sponsor_name'],['Industry',r=>d(r.industry),'industry']]},
 {id:'team_sponsors',g:'Football',label:'Team Sponsors',o:[['team_id',true],['sponsor_id',true]],sel:'*,teams(team_name),sponsors(sponsor_name)',
- c:[['Team',r=>T(r.teams,'team_name')],['Sponsor',r=>T(r.sponsors,'sponsor_name')],['Deal value',r=>money(r.deal_value),'deal_value'],['Since',r=>d(r.start_year),'start_year']]},
-{id:'employees',g:'Company',label:'Employees',pk:'employee_id',s:'last_name',sel:'*,departments(department_name)',
- c:[['ID',r=>d(r.employee_id),'employee_id'],['Name',r=>pn(r)],['Email',r=>d(r.email),'email'],['Job',r=>d(r.job_id),'job_id'],['Department',r=>T(r.departments,'department_name')],['Salary',r=>money(r.salary),'salary'],['Hired',r=>d(r.hire_date),'hire_date'],['Manager ID',r=>d(r.manager_id),'manager_id'],['Commission',r=>d(r.commission_pct),'commission_pct']]},
-{id:'departments',g:'Company',label:'Departments',pk:'department_id',s:'department_name',sel:'*,locations(city)',
- c:[['ID',r=>d(r.department_id),'department_id'],['Department',r=>d(r.department_name),'department_name'],['City',r=>T(r.locations,'city')],['Manager ID',r=>d(r.manager_id),'manager_id']]},
-{id:'locations',g:'Company',label:'Locations',pk:'location_id',s:'city',
- c:[['ID',r=>d(r.location_id),'location_id'],['City',r=>d(r.city),'city'],['Country',r=>d(r.country),'country']]},
-{id:'projects',g:'Company',label:'Projects',pk:'project_id',s:'project_name',sel:'*,departments(department_name)',
- c:[['ID',r=>d(r.project_id),'project_id'],['Project',r=>d(r.project_name),'project_name'],['Department',r=>T(r.departments,'department_name')],['Budget',r=>money(r.budget),'budget'],['Start',r=>d(r.start_date),'start_date']]},
-{id:'employee_projects',g:'Company',label:'Project Hours',o:[['project_id',true],['employee_id',true]],sel:'*,employees(first_name,last_name),projects(project_name)',
- c:[['Employee',r=>pn(r.employees)],['Project',r=>T(r.projects,'project_name')],['Hours',r=>d(r.hours),'hours']]},
-{id:'documents',g:'Files',label:'Documents',pk:'document_id',s:'title',
- c:[['ID',r=>d(r.document_id),'document_id'],['Title',r=>d(r.title),'title'],['Author',r=>d(r.author),'author'],['Language',r=>d(r.language),'language'],['Year',r=>d(r.publication_year),'publication_year'],['Pages',r=>d(r.page_count),'page_count'],
-  ['File',r=>r.file_path?'<a class="lk" target="_blank" rel="noopener" href="'+e(SUPABASE_URL+'/storage/v1/object/public/documents/'+r.file_path)+'">Open PDF</a>':'—']]}
+ c:[['Team',r=>T(r.teams,'team_name')],['Sponsor',r=>T(r.sponsors,'sponsor_name')],['Deal value',r=>money(r.deal_value),'deal_value'],['Since',r=>d(r.start_year),'start_year']]}
 ];
 
 var PS = 25, cur = null, page = 0, sortKey = null, asc = true, term = '', timer;
@@ -117,13 +113,14 @@ function buildNav(){
     if (t.g !== g){ g = t.g; h += '<h3>' + e(g) + '</h3>'; }
     h += '<a href="#' + t.id + '" id="n-' + t.id + '">' + e(t.label) + '</a>';
   });
+  h += '<h3>Reports</h3><a href="#reports" id="n-reports">📋 Reports</a>';
   nav.innerHTML = h;
 }
 
 async function home(){
   main.innerHTML = '<h2>Overview</h2><p class="sub">Click a table to browse it. Counting rows…</p><div class="cards" id="cards"></div>';
   var box = document.getElementById('cards');
-  box.innerHTML = TABLES.map(t => '<a class="card" href="#' + t.id + '"><b id="c-' + t.id + '">…</b><span>' + e(t.label) + '</span></a>').join('');
+  box.innerHTML = '<a class="card" href="#reports"><b>' + REPORTS.length + '</b><span>Reports</span></a>' + TABLES.map(t => '<a class="card" href="#' + t.id + '"><b id="c-' + t.id + '">…</b><span>' + e(t.label) + '</span></a>').join('');
   TABLES.forEach(async t => {
     var r = await db.from(t.id).select('*', {count: t.big ? 'estimated' : 'exact', head: true});
     var el = document.getElementById('c-' + t.id);
@@ -174,11 +171,68 @@ function show(t){
   load();
 }
 
+var REPORTS = [
+{id:'coach',title:'Coach Report',desc:'Coaches with their team, start date and trophies won.',fn:'get_coach_report',
+ p:[['p_team_name','Team name','text','e.g. Arsenal'],['p_coach_name','Coach name','text','e.g. Carlos'],['p_start_from','Started from','date'],['p_start_to','Started to','date'],['p_trophy_name','Trophy name','text','e.g. Champion'],['p_only_since_start','Only trophies since coach started','check']]},
+{id:'coach-summary',title:'Coach Summary Report',desc:'One row per coach with the number and names of trophies.',fn:'get_coach_summary',
+ p:[['p_team_name','Team name','text','e.g. Real']]},
+{id:'player-summary',title:'Player Summary Report',desc:'Appearances, goals, assists, rating and cards for each player.',fn:'get_player_summary',
+ p:[['p_team_name','Team name','text','e.g. Arsenal'],['p_player_name','Player name','text','e.g. Haaland'],['p_position','Position','text','GK, DF, MF or FW'],['p_country_name','Country','text','e.g. Brazil']]},
+{id:'team-standings',title:'Team Standings Report',desc:'League table with points, wins, draws and goal difference by season.',fn:'get_team_summary',
+ p:[['p_season','Season','text','e.g. 2023/2024'],['p_league_name','League','text','e.g. Premier'],['p_team_name','Team name','text','e.g. Chelsea']]},
+{id:'top-scorers',title:'Top Scorers Report',desc:'Players with the most goals, for all seasons or one season.',fn:'get_top_scorers',
+ p:[['p_season','Season','text','e.g. 2023/2024'],['p_team_name','Team name','text','e.g. Barcelona'],['p_limit','How many players','number','',10]]},
+{id:'transfers',title:'Transfer Report',desc:'Player transfers with both clubs, date and fee.',fn:'get_transfer_report',
+ p:[['p_team_name','Team (from or to)','text','e.g. Chelsea'],['p_player_name','Player name','text'],['p_min_fee','Minimum fee','number','e.g. 10000000'],['p_date_from','Date from','date'],['p_date_to','Date to','date']]},
+{id:'referee-summary',title:'Referee Summary Report',desc:'Matches officiated, goals per match and average attendance.',fn:'get_referee_summary',
+ p:[['p_referee_name','Referee name','text','e.g. Oliver'],['p_country_name','Country','text','e.g. England']]}
+];
+
+function showReports(){
+  cur = null;
+  main.innerHTML = '<h2>Reports</h2><p class="sub">Choose a report to run. Each one uses a function saved in your Supabase database.</p><div class="cards">' +
+    REPORTS.map(r => '<a class="card" href="#report-' + r.id + '"><b style="font-size:1.05rem">' + e(r.title) + '</b><span>' + e(r.desc) + '</span></a>').join('') + '</div>';
+}
+
+function showReportPage(r){
+  cur = null;
+  main.innerHTML = '<p class="sub np"><a class="lk" href="#reports">← All reports</a></p><h2>' + e(r.title) + '</h2><p class="sub">' + e(r.desc) + '</p>' +
+    '<form id="rf" class="rf np">' +
+    r.p.map((q, i) => q[2] === 'check'
+      ? '<label class="ck"><input type="checkbox" id="rp' + i + '"> ' + e(q[1]) + '</label>'
+      : '<label>' + e(q[1]) + '<input id="rp' + i + '" type="' + q[2] + '" placeholder="' + e(q[3] || '') + '" value="' + e(q[4] == null ? '' : q[4]) + '"' + (q[2] === 'number' ? ' step="any"' : '') + '></label>').join('') +
+    '<button type="submit">Run report</button><button type="button" class="g" id="rpdf">Save as PDF</button></form>' +
+    '<p id="rst" class="sub">Set your filters (all optional) and click Run report.</p>' +
+    '<div class="wrap"><table><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>';
+  var g = id => document.getElementById(id);
+  g('rpdf').onclick = () => window.print();
+  g('rf').onsubmit = async function(ev){
+    ev.preventDefault();
+    var params = {};
+    r.p.forEach((q, i) => {
+      var el = g('rp' + i), v = el.value ? el.value.trim() : '';
+      params[q[0]] = q[2] === 'check' ? el.checked : (v === '' ? null : (q[2] === 'number' ? Number(v) : v));
+    });
+    g('rst').className = 'sub'; g('rst').textContent = 'Running…';
+    var res = await db.rpc(r.fn, params);
+    g('rth').innerHTML = ''; g('rtb').innerHTML = '';
+    if (res.error){ g('rst').className = 'er2'; g('rst').textContent = 'Error: ' + res.error.message; return; }
+    var rows = res.data || [];
+    if (!rows.length){ g('rst').textContent = 'No rows found for these filters.'; return; }
+    var cols = Object.keys(rows[0]);
+    g('rth').innerHTML = '<tr>' + cols.map(c => '<th>' + e(c.replace(/_/g, ' ')) + '</th>').join('') + '</tr>';
+    g('rtb').innerHTML = rows.map(x => '<tr>' + cols.map(c => '<td>' + d(x[c]) + '</td>').join('') + '</tr>').join('');
+    g('rst').textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's') + ' · ' + new Date().toLocaleString();
+  };
+}
+
 function route(){
   var id = location.hash.slice(1) || 'home';
-  nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.id === 'n-' + id));
+  var navId = (id === 'reports' || id.indexOf('report-') === 0) ? 'reports' : id;
+  nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.id === 'n-' + navId));
   var t = TABLES.find(x => x.id === id);
-  if (t) show(t); else home();
+  var rp = REPORTS.find(x => 'report-' + x.id === id);
+  if (id === 'reports') showReports(); else if (rp) showReportPage(rp); else if (t) show(t); else home();
   window.scrollTo(0, 0);
 }
 
