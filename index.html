@@ -190,6 +190,45 @@ var REPORTS = [
 
 function showReports(){
   cur = null;
+  main.innerHTML = '<h2>Reports</h2><p class="sub">Click a report name to open it.</p>' +
+    '<div class="wrap"><table><thead><tr><th>Report name</th><th>Report description</th></tr></thead><tbody>' +
+    REPORTS.map(r => '<tr><td><a class="rn" href="#report-' + r.id + '">' + e(r.title) + '</a></td><td style="white-space:normal">' + e(r.desc) + '</td></tr>').join('') +
+    '</tbody></table></div>';
+}
+
+function showReportPage(r){
+  cur = null;
+  main.innerHTML = '<p class="sub np"><a class="lk" href="#reports">← All reports</a></p><h2>' + e(r.title) + '</h2><p class="sub">' + e(r.desc) + '</p>' +
+    '<form id="rf" class="rf np">' +
+    r.p.map((q, i) => q[2] === 'check'
+      ? '<label class="ck"><input type="checkbox" id="rp' + i + '"> ' + e(q[1]) + '</label>'
+      : '<label>' + e(q[1]) + '<input id="rp' + i + '" type="' + q[2] + '" placeholder="' + e(q[3] || '') + '" value="' + e(q[4] == null ? '' : q[4]) + '"' + (q[2] === 'number' ? ' step="any"' : '') + '></label>').join('') +
+    '<button type="submit">Run report</button><button type="button" class="g" id="rpdf">Save as PDF</button></form>' +
+    '<p id="rst" class="sub">Set your filters (all optional) and click Run report.</p>' +
+    '<div class="wrap"><table><thead id="rth"></thead><tbody id="rtb"></tbody></table></div>';
+  var g = id => document.getElementById(id);
+  g('rpdf').onclick = () => window.print();
+  g('rf').onsubmit = async function(ev){
+    ev.preventDefault();
+    var params = {};
+    r.p.forEach((q, i) => {
+      var el = g('rp' + i), v = el.value ? el.value.trim() : '';
+      params[q[0]] = q[2] === 'check' ? el.checked : (v === '' ? null : (q[2] === 'number' ? Number(v) : v));
+    });
+    g('rst').className = 'sub'; g('rst').textContent = 'Running…';
+    var res = await db.rpc(r.fn, params);
+    g('rth').innerHTML = ''; g('rtb').innerHTML = '';
+    if (res.error){ g('rst').className = 'er2'; g('rst').textContent = 'Error: ' + res.error.message; return; }
+    var rows = res.data || [];
+    if (!rows.length){ g('rst').textContent = 'No rows found for these filters.'; return; }
+    var cols = Object.keys(rows[0]);
+    g('rth').innerHTML = '<tr>' + cols.map(c => '<th>' + e(c.replace(/_/g, ' ')) + '</th>').join('') + '</tr>';
+    g('rtb').innerHTML = rows.map(x => '<tr>' + cols.map(c => '<td>' + d(x[c]) + '</td>').join('') + '</tr>').join('');
+    g('rst').textContent = rows.length + ' row' + (rows.length === 1 ? '' : 's') + ' · ' + new Date().toLocaleString();
+  };
+}
+function showReports(){
+  cur = null;
   main.innerHTML = '<h2>Reports</h2><p class="sub">Choose a report to run. Each one uses a function saved in your Supabase database.</p><div class="cards">' +
     REPORTS.map(r => '<a class="card" href="#report-' + r.id + '"><b style="font-size:1.05rem">' + e(r.title) + '</b><span>' + e(r.desc) + '</span></a>').join('') + '</div>';
 }
