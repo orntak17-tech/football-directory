@@ -183,6 +183,8 @@ var REPORTS = [
  p:[['p_season','Season','text','e.g. 2023/2024'],['p_league_name','League','text','e.g. Premier'],['p_team_name','Team name','text','e.g. Chelsea']]},
 {id:'top-scorers',title:'Top Scorers Report',desc:'Players with the most goals, for all seasons or one season.',fn:'get_top_scorers',
  p:[['p_season','Season','text','e.g. 2023/2024'],['p_team_name','Team name','text','e.g. Barcelona'],['p_limit','How many players','number','',10]]},
+ {id:'top10-scorers',title:'Top 10 Scorers Report',desc:'The 10 players with the most goals, for all seasons or one season.',fn:'get_top10_scorers',
+ p:[['p_season','Season','text','e.g. 2023/2024']]},
 {id:'transfers',title:'Transfer Report',desc:'Player transfers with both clubs, date and fee.',fn:'get_transfer_report',
  p:[['p_team_name','Team (from or to)','text','e.g. Chelsea'],['p_player_name','Player name','text'],['p_min_fee','Minimum fee','number','e.g. 10000000'],['p_date_from','Date from','date'],['p_date_to','Date to','date']]},
 {id:'referee-summary',title:'Referee Summary Report',desc:'Matches officiated, goals per match and average attendance.',fn:'get_referee_summary',
